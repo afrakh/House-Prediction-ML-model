@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bangalore House Price Prediction</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <style>
+        body {
+            background: #f0f2f5;
+            font-family: 'Poppins', sans-serif;
+            padding: 20px;
+        }
+
+        .input-card, .prediction-card {
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            background: #ffffff;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #007bff;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-weight: 600;
+        }
+
+        .btn-custom {
+            background: linear-gradient(45deg, #007bff, #28a745);
+            color: #fff;
+            font-weight: 600;
+            width: 100%;
+            font-size: 1.1rem;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .btn-custom:hover {
+            background: linear-gradient(45deg, #28a745, #007bff);
+            transform: scale(1.05);
+        }
+
+        .prediction-card {
+            display: none;
+            text-align: center;
+            padding-top: 40px;
+            padding-bottom: 40px;
+            position: relative;
+        }
+
+        .prediction-card.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {opacity:0; transform: translateY(-20px);}
+            to {opacity:1; transform: translateY(0);}
+        }
+
+        .house-svg {
+            width: 80px;
+            margin-bottom: 15px;
+        }
+
+        .house-icon {
+    margin-bottom: 15px;
+}
+
+
+        .price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #28a745;
+        }
+
+        .details {
+            font-size: 1rem;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        .form-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Input Card -->
+    <div class="input-card">
+        <h2>Bangalore House Price Prediction</h2>
+
+        <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <select id="location" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+            <label for="sqft" class="form-label">Total Square Feet</label>
+            <input type="number" id="sqft" class="form-control" placeholder="300 - 5000" min="300" max="5000">
+            <div class="form-text">Enter realistic sqft (300-5000)</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <label for="bhk" class="form-label">BHK</label>
+                <select id="bhk" class="form-select">
+                    <option value="1">1 BHK</option>
+                    <option value="2">2 BHK</option>
+                    <option value="3">3 BHK</option>
+                    <option value="4">4 BHK</option>
+                    <option value="5">5 BHK</option>
+                </select>
+            </div>
+            <div class="col">
+                <label for="bath" class="form-label">Bathrooms</label>
+                <select id="bath" class="form-select">
+                    <option value="1">1 Bath</option>
+                    <option value="2">2 Bath</option>
+                    <option value="3">3 Bath</option>
+                    <option value="4">4 Bath</option>
+                    <option value="5">5 Bath</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn btn-custom btn-lg" onclick="predictPrice()"><i class="fa-solid fa-dollar-sign"></i> Predict Price</button>
+    </div>
+
+    <!-- Prediction Card -->
+ <div class="prediction-card" id="prediction-card">
+    <div class="house-icon">
+        <i class="fa-solid fa-house-chimney fa-5x" style="color:#007bff;"></i>
+    </div>
+    <div class="price" id="price"></div>
+    <div class="details" id="details"></div>
+</div>
+
+</div>
+
+<script>
+    async function loadLocations() {
+        const response = await fetch("/get_locations");
+        const data = await response.json();
+        const locationSelect = document.getElementById("location");
+        data.locations.forEach(loc => {
+            const option = document.createElement("option");
+            option.value = loc;
+            option.text = loc;
+            locationSelect.appendChild(option);
+        });
+    }
+
+    async function predictPrice() {
+        const sqft = parseFloat(document.getElementById("sqft").value);
+        const bhk = parseInt(document.getElementById("bhk").value);
+        const bath = parseInt(document.getElementById("bath").value);
+        const location = document.getElementById("location").value;
+
+        if (!sqft || sqft < 300 || sqft > 5000) {
+            alert("Please enter realistic total square feet (300-5000).");
+            return;
+        }
+        if (!location) {
+            alert("Please select a location.");
+            return;
+        }
+
+        const response = await fetch("/predict_home_price", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ total_sqft: sqft, bhk: bhk, bath: bath, location: location })
+        });
+
+        const data = await response.json();
+
+        const priceDiv = document.getElementById("price");
+        const detailsDiv = document.getElementById("details");
+        const predictionCard = document.getElementById("prediction-card");
+
+        if (data.estimated_price < 1) {
+            priceDiv.textContent = "Prediction unrealistic!";
+            detailsDiv.textContent = "";
+        } else {
+            priceDiv.textContent = "₹ " + data.estimated_price + " Lakhs";
+            detailsDiv.textContent = `${bhk} BHK | ${bath} Bath | ${sqft} sqft | ${location}`;
+        }
+
+        predictionCard.classList.add("show");
+    }
+
+    loadLocations();
+</script>
+
+</body>
+</html>
